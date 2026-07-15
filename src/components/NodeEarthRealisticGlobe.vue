@@ -6,6 +6,7 @@ import {
   useDocumentVisibility,
   useElementSize,
   useElementVisibility,
+  usePreferredReducedMotion,
 } from '@vueuse/core'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useNodeGeoClusters } from '@/composables/useNodeGeoClusters'
@@ -29,7 +30,9 @@ const { width: containerWidth, height: containerHeight } = useElementSize(contai
 
 const documentVisibility = useDocumentVisibility()
 const elementVisible = useElementVisibility(containerRef)
+const reducedMotion = usePreferredReducedMotion()
 const shouldRender = computed(() => documentVisibility.value === 'visible' && elementVisible.value)
+const shouldAutoRotate = computed(() => !appStore.stopEarth && reducedMotion.value !== 'reduce')
 
 let globe: GlobeInstance | null = null
 let globeMaterial: MeshPhongMaterial | null = null
@@ -124,7 +127,7 @@ function applyControls() {
   if (!globe)
     return
   const controls = globe.controls()
-  controls.autoRotate = shouldRender.value && !appStore.stopEarth
+  controls.autoRotate = shouldRender.value && shouldAutoRotate.value
   controls.autoRotateSpeed = 1.6
   controls.enableDamping = true
   controls.enableZoom = false
@@ -291,6 +294,8 @@ watch(() => appStore.stopEarth, (stopped) => {
   if (stopped)
     resetPointOfView(300)
 })
+
+watch(shouldAutoRotate, applyControls)
 
 watch(shouldRender, (visible) => {
   if (!globe)

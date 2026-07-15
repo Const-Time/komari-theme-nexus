@@ -1,4 +1,4 @@
-import type { LoadRecord, PingRecord, PingTask } from '@/utils/api'
+import type { StatusRecord } from '@/utils/rpc'
 
 export type NexusNetworkMode = 'auto' | 'lan' | 'wan'
 
@@ -37,19 +37,8 @@ export interface NexusSettingsSnapshot {
   probeInterval: number
 }
 
-export interface NexusPingRecord extends PingRecord {
-  client?: string
-}
-
-export interface NexusPingTask extends PingTask {
-  latest?: number
-  avg?: number
-}
-
 export interface NexusNodeHistory {
-  loadRecords: LoadRecord[]
-  pingRecords: NexusPingRecord[]
-  pingTasks: NexusPingTask[]
+  loadRecords: StatusRecord[]
   loadedAt: number
   error: string | null
 }

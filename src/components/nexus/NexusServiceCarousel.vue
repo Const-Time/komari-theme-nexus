@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { usePreferredReducedMotion, useResizeObserver } from '@vueuse/core'
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import NexusServiceCard from '@/components/nexus/NexusServiceCard.vue'
 import { Button } from '@/components/ui/button'
 import { Empty } from '@/components/ui/empty'
@@ -45,6 +45,29 @@ function scrollTrack(direction: -1 | 1) {
     left: direction * track.clientWidth * 0.82,
     behavior: reducedMotion.value === 'reduce' ? 'auto' : 'smooth',
   })
+}
+
+function selectGroup(groupId: string) {
+  nexusStore.selectedServiceGroup = groupId
+}
+
+function handleGroupKeydown(event: KeyboardEvent, index: number) {
+  let nextIndex = index
+  if (event.key === 'ArrowLeft')
+    nextIndex = (index - 1 + groupOptions.value.length) % groupOptions.value.length
+  else if (event.key === 'ArrowRight')
+    nextIndex = (index + 1) % groupOptions.value.length
+  else if (event.key === 'Home')
+    nextIndex = 0
+  else if (event.key === 'End')
+    nextIndex = groupOptions.value.length - 1
+  else
+    return
+
+  event.preventDefault()
+  const tabs = (event.currentTarget as HTMLElement).parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')
+  selectGroup(groupOptions.value[nextIndex]!.id)
+  tabs?.[nextIndex]?.focus()
 }
 
 function handleKeydown(event: KeyboardEvent) {
@@ -126,16 +149,7 @@ watch(filteredServices, async () => {
   if (trackRef.value)
     trackRef.value.scrollLeft = 0
   updateScrollState()
-})
-
-onMounted(() => {
-  trackRef.value?.addEventListener('wheel', handleWheel, { passive: false })
-  updateScrollState()
-})
-
-onBeforeUnmount(() => {
-  trackRef.value?.removeEventListener('wheel', handleWheel)
-})
+}, { immediate: true, flush: 'post' })
 </script>
 
 <template>
@@ -147,14 +161,17 @@ onBeforeUnmount(() => {
         </h2>
         <div class="nexus-horizontal-scroll flex min-w-0 gap-1 overflow-x-auto" role="tablist" aria-label="服务分组">
           <button
-            v-for="group in groupOptions"
+            v-for="(group, index) in groupOptions"
             :key="group.id"
             type="button"
             role="tab"
+            aria-controls="nexus-service-panel"
             class="h-9 shrink-0 rounded-sm px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             :class="{ 'bg-primary/10 text-primary': nexusStore.selectedServiceGroup === group.id }"
             :aria-selected="nexusStore.selectedServiceGroup === group.id"
-            @click="nexusStore.selectedServiceGroup = group.id"
+            :tabindex="nexusStore.selectedServiceGroup === group.id ? 0 : -1"
+            @click="selectGroup(group.id)"
+            @keydown="handleGroupKeydown($event, index)"
           >
             {{ group.name }}
           </button>
@@ -173,12 +190,14 @@ onBeforeUnmount(() => {
     <Empty v-if="filteredServices.length === 0" description="暂无常用服务" class="min-h-32 rounded-md border border-dashed border-border/70" />
     <div
       v-else
+      id="nexus-service-panel"
       ref="trackRef"
       class="nexus-service-track nexus-horizontal-scroll grid cursor-grab snap-x snap-mandatory grid-flow-col gap-3 overflow-x-auto pb-2 active:cursor-grabbing"
       tabindex="0"
-      role="region"
+      role="tabpanel"
       aria-label="常用服务轮播"
       @scroll.passive="updateScrollState"
+      @wheel="handleWheel"
       @keydown="handleKeydown"
       @pointerdown="handlePointerDown"
       @pointermove="handlePointerMove"

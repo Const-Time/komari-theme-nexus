@@ -5,6 +5,11 @@ import { useStorageAsync } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { getAuthSession, requirePermission, setAuthSessionFromLogin, verifyLogin } from '@/services/auth.service'
+import {
+  DEFAULT_LAN_HOST_PATTERNS,
+  parseHostPatterns,
+  parseNexusConfig,
+} from '@/utils/nexusConfig'
 
 export type ThemeMode = 'auto' | 'light' | 'dark'
 export type ManagedThemeMode = 'beijing' | 'light' | 'dark'
@@ -882,6 +887,14 @@ const useAppStore = defineStore('app', () => {
   const connectionError = ref<boolean>(false)
 
   const themeSettings = computed(() => normalizeThemeSettings(publicSettings.value?.theme_settings))
+  const nexusConfig = computed(() => parseNexusConfig(themeSettings.value.nexusConfig))
+  const nexusLanHostPatterns = computed(() => parseHostPatterns(
+    themeSettings.value.nexusLanHostPatterns,
+    DEFAULT_LAN_HOST_PATTERNS,
+  ))
+  const nexusWanHostPatterns = computed(() => parseHostPatterns(themeSettings.value.nexusWanHostPatterns))
+  const nexusProbeAutoplay = computed(() => readBooleanSetting(themeSettings.value, 'nexusProbeAutoplay', true))
+  const nexusProbeInterval = computed(() => readNumberSetting(themeSettings.value, 'nexusProbeInterval', 8, 3, 60))
   const visitorAuditSupported = computed(() => typeof publicSettings.value?.visitor_audit_enabled === 'boolean')
   const visitorAuditEnabled = computed(() => publicSettings.value?.visitor_audit_enabled === true)
 
@@ -978,7 +991,7 @@ const useAppStore = defineStore('app', () => {
 
   const earthRenderer = computed<EarthRenderer>(() => {
     const value = themeSettings.value.earthRenderer
-    return isValidEarthRenderer(value) ? value : 'realistic'
+    return isValidEarthRenderer(value) ? value : 'cobe'
   })
 
   const hideEarth = computed<boolean>(() => readBooleanSetting(themeSettings.value, 'hideEarth', false))
@@ -1334,6 +1347,11 @@ const useAppStore = defineStore('app', () => {
     currentBackgroundUrl,
     backgroundBlur,
     backgroundOverlay,
+    nexusConfig,
+    nexusLanHostPatterns,
+    nexusWanHostPatterns,
+    nexusProbeAutoplay,
+    nexusProbeInterval,
     isLoggedIn,
     authStatus,
     privateFeaturesAllowed,

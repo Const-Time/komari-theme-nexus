@@ -11,7 +11,7 @@ const props = withDefaults(defineProps<{
   size: 'md',
 })
 
-const IMAGE_URL_RE = /^(?:https?:|data:|\/)/i
+const IMAGE_URL_RE = /^(?:https?:|data:image\/(?:gif|jpeg|png|webp);base64,|\/)/i
 
 const imageError = ref(false)
 const imageLoaded = ref(false)

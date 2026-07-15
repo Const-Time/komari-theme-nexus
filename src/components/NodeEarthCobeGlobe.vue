@@ -6,6 +6,7 @@ import {
   useDocumentVisibility,
   useElementSize,
   useElementVisibility,
+  usePreferredReducedMotion,
   useRafFn,
 } from '@vueuse/core'
 import createGlobe from 'cobe'
@@ -24,8 +25,9 @@ const { width: containerWidth, height: containerHeight } = useElementSize(contai
 
 const documentVisibility = useDocumentVisibility()
 const elementVisible = useElementVisibility(containerRef)
+const reducedMotion = usePreferredReducedMotion()
 const shouldRender = computed(() => documentVisibility.value === 'visible' && elementVisible.value)
-const shouldAutoRotate = computed(() => !appStore.stopEarth)
+const shouldAutoRotate = computed(() => !appStore.stopEarth && reducedMotion.value !== 'reduce')
 
 let globe: Globe | null = null
 const INITIAL_THETA = 0.22
@@ -227,13 +229,17 @@ const { pause: pauseRaf, resume: resumeRaf } = useRafFn(
       targetPhi += 0.0010
     phi += (targetPhi - phi) * 1
     theta += (targetTheta - theta) * 1
-    if (
+    const orientationIdle = (
       Math.abs(phi - prevPhi) < ORIENTATION_IDLE_EPSILON
       && Math.abs(theta - prevTheta) < ORIENTATION_IDLE_EPSILON
-    ) {
+    )
+    if (orientationIdle) {
       if (!shouldAutoRotate.value && shouldKeepStaticRedraw()) {
         updateGlobeFrame()
         applyLabelStyles()
+      }
+      else if (!shouldAutoRotate.value) {
+        pauseRaf()
       }
       return
     }
@@ -283,6 +289,8 @@ watch(() => appStore.isDark, () => {
   triggerStaticRedrawWindow()
   updateGlobeFrame()
   applyLabelStyles()
+  if (shouldRender.value)
+    resumeRaf()
 })
 
 watch(
@@ -294,6 +302,8 @@ watch(
       triggerStaticRedrawWindow(600)
     updateGlobeFrame()
     applyLabelStyles()
+    if (shouldRender.value)
+      resumeRaf()
   },
 )
 
@@ -317,8 +327,16 @@ watch(
     applyLabelStyles()
     if (!shouldAutoRotate.value)
       triggerStaticRedrawWindow(600)
+    if (shouldRender.value)
+      resumeRaf()
   },
 )
+
+watch(shouldAutoRotate, () => {
+  triggerStaticRedrawWindow()
+  if (shouldRender.value)
+    resumeRaf()
+})
 
 watch(shouldRender, (visible) => {
   if (!globe)
@@ -339,6 +357,8 @@ function onPointerDown(e: PointerEvent) {
   lastPointerY = e.clientY
   const target = e.currentTarget as HTMLElement
   target.setPointerCapture(e.pointerId)
+  if (shouldRender.value)
+    resumeRaf()
 }
 function onPointerMove(e: PointerEvent) {
   if (!isPointerDown)

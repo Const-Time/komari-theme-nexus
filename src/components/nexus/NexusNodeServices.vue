@@ -40,24 +40,25 @@ function handleUnavailable(service: NexusService, event: MouseEvent) {
       <NexusServiceIcon class="nexus-node-service-icon" :icon="service.icon" :name="service.name" size="md" />
       <span class="w-full truncate text-xs text-muted-foreground">{{ service.name }}</span>
     </a>
-    <button
+    <NexusMoreServices
       v-if="hasMore"
-      type="button"
-      class="flex min-w-0 flex-1 flex-col items-center gap-1.5 rounded-sm px-1 py-1 text-center text-muted-foreground outline-none transition-colors hover:bg-muted/55 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-      aria-label="查看该节点更多服务"
-      @click.stop="moreOpen = true"
+      v-model:open="moreOpen"
+      :node-name="nodeName"
+      :services="services"
     >
-      <span class="inline-flex size-12 items-center justify-center rounded-md bg-muted/45">
-        <Icon icon="lucide:ellipsis" class="size-5" />
-      </span>
-      <span class="text-xs">更多</span>
-    </button>
+      <template #trigger>
+        <button
+          type="button"
+          class="flex min-w-0 flex-1 flex-col items-center gap-1.5 rounded-sm px-1 py-1 text-center text-muted-foreground outline-none transition-colors hover:bg-muted/55 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label="查看该节点更多服务"
+          @click.stop
+        >
+          <span class="inline-flex size-12 items-center justify-center rounded-md bg-muted/45">
+            <Icon icon="lucide:ellipsis" class="size-5" />
+          </span>
+          <span class="text-xs">更多</span>
+        </button>
+      </template>
+    </NexusMoreServices>
   </div>
-
-  <NexusMoreServices
-    v-if="moreOpen"
-    :node-name="nodeName"
-    :services="services"
-    @close="moreOpen = false"
-  />
 </template>

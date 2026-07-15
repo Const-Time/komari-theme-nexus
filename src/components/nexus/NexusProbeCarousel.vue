@@ -2,23 +2,24 @@
 import type { NodeData } from '@/stores/nodes'
 import { Icon } from '@iconify/vue'
 import { useDocumentVisibility, useMediaQuery, usePreferredReducedMotion } from '@vueuse/core'
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onActivated, onBeforeUnmount, onDeactivated, ref, watch } from 'vue'
 import NexusProbeCard from '@/components/nexus/NexusProbeCard.vue'
 import { Button } from '@/components/ui/button'
 import { Empty } from '@/components/ui/empty'
+import { useAppStore } from '@/stores/app'
 import { useNexusStore } from '@/stores/nexus'
-import { useNexusHistoryStore } from '@/stores/nexusHistory'
 
 const props = defineProps<{
   nodes: NodeData[]
 }>()
 
 const nexusStore = useNexusStore()
-const historyStore = useNexusHistoryStore()
+const appStore = useAppStore()
 const isMobile = useMediaQuery('(max-width: 767px)')
 const reducedMotion = usePreferredReducedMotion()
 const documentVisibility = useDocumentVisibility()
 const hovered = ref(false)
+const active = ref(true)
 const pageSize = computed(() => isMobile.value ? 2 : 3)
 const pageCount = computed(() => Math.max(1, Math.ceil(props.nodes.length / pageSize.value)))
 const currentPage = computed(() => Math.min(Math.max(nexusStore.probePage, 0), pageCount.value - 1))
@@ -32,12 +33,6 @@ watch(pageCount, (count) => {
     nexusStore.probePage = Math.max(0, count - 1)
 }, { immediate: true })
 
-watch(
-  () => visibleNodes.value.map(node => node.uuid),
-  uuids => historyStore.ensureMany(uuids),
-  { immediate: true },
-)
-
 let autoTimer: ReturnType<typeof setTimeout> | null = null
 let userPausedUntil = 0
 
@@ -50,6 +45,7 @@ function clearAutoTimer() {
 
 function shouldAutoplay(): boolean {
   return nexusStore.probeAutoplay
+    && active.value
     && pageCount.value > 1
     && !hovered.value
     && documentVisibility.value === 'visible'
@@ -98,10 +94,20 @@ function handleKeydown(event: KeyboardEvent) {
 }
 
 watch(
-  [() => nexusStore.probeAutoplay, () => nexusStore.probeInterval, pageCount, hovered, documentVisibility, reducedMotion],
+  [() => nexusStore.probeAutoplay, () => nexusStore.probeInterval, pageCount, hovered, active, documentVisibility, reducedMotion],
   scheduleAutoplay,
   { immediate: true },
 )
+
+onActivated(() => {
+  active.value = true
+  scheduleAutoplay()
+})
+
+onDeactivated(() => {
+  active.value = false
+  clearAutoTimer()
+})
 
 onBeforeUnmount(clearAutoTimer)
 </script>
@@ -148,7 +154,7 @@ onBeforeUnmount(clearAutoTimer)
     </div>
 
     <Empty v-if="nodes.length === 0" description="暂无探针节点" class="min-h-48 rounded-md border border-dashed border-border/70" />
-    <Transition v-else name="nexus-page" mode="out-in">
+    <Transition v-else name="nexus-page" mode="out-in" :css="!appStore.disablePageAnimation && reducedMotion !== 'reduce'">
       <div :key="`${pageSize}-${currentPage}`" class="grid grid-cols-1 gap-3 md:grid-cols-3">
         <NexusProbeCard v-for="node in visibleNodes" :key="node.uuid" :node="node" />
       </div>

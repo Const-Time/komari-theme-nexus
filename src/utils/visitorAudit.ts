@@ -33,6 +33,8 @@ const EVENT_META: Record<string, VisitorEventMeta> = {
   group_change: { label: '切换分组', icon: 'tabler:category' },
   filter_change: { label: '快捷筛选', icon: 'tabler:filter' },
   view_mode_change: { label: '切换视图', icon: 'tabler:layout-grid' },
+  theme_mode_change: { label: '切换主题', icon: 'tabler:sun-moon' },
+  network_mode_change: { label: '切换访问网络', icon: 'tabler:network' },
   admin_entry_click: { label: '进入后台', icon: 'tabler:settings' },
   home_tool_open: { label: '打开工具', icon: 'tabler:tool' },
   audit_refresh: { label: '刷新审计', icon: 'tabler:refresh' },

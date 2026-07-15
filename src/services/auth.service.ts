@@ -12,6 +12,7 @@ export type PermissionKey
     | 'auditLog'
     | 'diskPrediction'
     | 'providerGeoLookup'
+    | 'nexusSettings'
 
 export interface AuthSession {
   status: AuthStatus

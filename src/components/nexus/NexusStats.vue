@@ -5,7 +5,6 @@ import { Icon } from '@iconify/vue'
 import { computed, ref, watch } from 'vue'
 import NexusSparkline from '@/components/nexus/NexusSparkline.vue'
 import { useAppStore } from '@/stores/app'
-import { useNexusHistoryStore } from '@/stores/nexusHistory'
 import { formatBytesPerSecondWithConfig, formatBytesWithConfig } from '@/utils/helper'
 
 const props = defineProps<{
@@ -13,7 +12,6 @@ const props = defineProps<{
 }>()
 
 const appStore = useAppStore()
-const historyStore = useNexusHistoryStore()
 const samples = ref<NexusAggregateSample[]>([])
 
 function ratio(used: number, total: number): number {
@@ -54,9 +52,12 @@ watch(
     node.online,
     node.cpu,
     node.ram,
+    node.mem_total,
     node.disk,
+    node.disk_total,
     node.net_in,
     node.net_out,
+    node.cpu_cores,
   ].join(':')).join('|'),
   () => {
     const sample = captureSample()
@@ -78,43 +79,7 @@ const diskUsed = computed(() => props.nodes.reduce((sum, node) => sum + (node.di
 const diskTotal = computed(() => props.nodes.reduce((sum, node) => sum + (node.disk_total || 0), 0))
 const cpuCores = computed(() => props.nodes.reduce((sum, node) => sum + (node.cpu_cores || 0), 0))
 
-const historicalSamples = computed(() => {
-  const recordLists = props.nodes
-    .map(node => historyStore.get(node.uuid)?.loadRecords.slice(-24) || [])
-    .filter(records => records.length > 0)
-  const pointCount = Math.max(0, ...recordLists.map(records => records.length))
-
-  return Array.from({ length: pointCount }, (_, pointIndex) => {
-    const records = recordLists
-      .map(records => records[records.length - pointCount + pointIndex])
-      .filter(record => record !== undefined)
-    const totals = records.reduce((acc, record) => {
-      acc.cpu += Number(record.cpu) || 0
-      acc.memoryUsed += Number(record.ram) || 0
-      acc.memoryTotal += Number(record.ram_total) || 0
-      acc.diskUsed += Number(record.disk) || 0
-      acc.diskTotal += Number(record.disk_total) || 0
-      acc.upload += Number(record.net_out) || 0
-      acc.download += Number(record.net_in) || 0
-      return acc
-    }, { cpu: 0, memoryUsed: 0, memoryTotal: 0, diskUsed: 0, diskTotal: 0, upload: 0, download: 0 })
-
-    return {
-      cpu: records.length > 0 ? totals.cpu / records.length : 0,
-      memory: ratio(totals.memoryUsed, totals.memoryTotal),
-      disk: ratio(totals.diskUsed, totals.diskTotal),
-      upload: totals.upload,
-      download: totals.download,
-    }
-  })
-})
-
 function historicalTrend(key: 'cpu' | 'memory' | 'disk' | 'network'): number[] {
-  if (historicalSamples.value.length > 1) {
-    return historicalSamples.value.map(sample => key === 'network'
-      ? sample.upload + sample.download
-      : sample[key])
-  }
   return samples.value.map(sample => key === 'network'
     ? sample.upload + sample.download
     : sample[key])

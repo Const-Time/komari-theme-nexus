@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import type { NodeData } from '@/stores/nodes'
-import type { LoadRecord } from '@/utils/api'
+import type { StatusRecord } from '@/utils/rpc'
 import { Icon } from '@iconify/vue'
-import { computed, watch } from 'vue'
+import { computed, onActivated, onDeactivated, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import NexusNodeServices from '@/components/nexus/NexusNodeServices.vue'
 import NexusProbeMetric from '@/components/nexus/NexusProbeMetric.vue'
 import NexusSparkline from '@/components/nexus/NexusSparkline.vue'
+import { useNodePingStats } from '@/composables/useNodePingStats'
 import { useAppStore } from '@/stores/app'
 import { useNexusHistoryStore } from '@/stores/nexusHistory'
 import { CURRENCY_SYMBOLS, normalizeCurrency } from '@/utils/financeHelper'
@@ -26,11 +27,32 @@ const props = defineProps<{
 const appStore = useAppStore()
 const historyStore = useNexusHistoryStore()
 const router = useRouter()
+const active = ref(true)
 const history = computed(() => historyStore.get(props.node.uuid))
+const pingStats = useNodePingStats(() => props.node.uuid, {
+  hours: 6,
+  maxCount: 96,
+  enabled: active,
+})
 
-watch(() => props.node.uuid, uuid => historyStore.ensure(uuid), { immediate: true })
+watch(
+  [() => props.node.uuid, active, () => props.node.time],
+  ([uuid, isActive]) => {
+    if (isActive)
+      void historyStore.ensure(uuid)
+  },
+  { immediate: true },
+)
 
-function loadSeries(key: keyof Pick<LoadRecord, 'cpu' | 'ram' | 'disk' | 'net_in' | 'net_out'>): number[] {
+onActivated(() => {
+  active.value = true
+})
+
+onDeactivated(() => {
+  active.value = false
+})
+
+function loadSeries(key: keyof Pick<StatusRecord, 'cpu' | 'ram' | 'disk' | 'net_in' | 'net_out'>): number[] {
   return (history.value?.loadRecords || [])
     .map(record => Number(record[key]))
     .filter(Number.isFinite)
@@ -51,34 +73,16 @@ function percentageSeries(
     .slice(-32)
 }
 
-const primaryPingRecords = computed(() => {
-  const records = history.value?.pingRecords || []
-  const taskId = history.value?.pingTasks[0]?.id
-  return taskId === undefined ? records : records.filter(record => record.task_id === taskId)
-})
-const latencySeries = computed(() => primaryPingRecords.value
-  .map(record => record.value)
-  .filter(value => Number.isFinite(value) && value >= 0)
+const latencySeries = computed(() => pingStats.history.value
+  .map(point => point.latency)
+  .filter((value): value is number => typeof value === 'number' && Number.isFinite(value))
   .slice(-32))
-const lossSeries = computed(() => primaryPingRecords.value
-  .slice(-32)
-  .map(record => record.value < 0 ? 100 : 0))
-const latency = computed(() => {
-  const task = history.value?.pingTasks[0]
-  const taskValue = task?.latest ?? task?.avg
-  if (typeof taskValue === 'number' && Number.isFinite(taskValue))
-    return taskValue
-  return latencySeries.value.at(-1) ?? 0
-})
-const packetLoss = computed(() => {
-  const tasks = history.value?.pingTasks || []
-  if (tasks.length > 0)
-    return tasks.reduce((sum, task) => sum + (Number(task.loss) || 0), 0) / tasks.length
-  const records = primaryPingRecords.value
-  if (records.length === 0)
-    return 0
-  return records.filter(record => record.value < 0).length / records.length * 100
-})
+const lossSeries = computed(() => pingStats.history.value
+  .map(point => point.loss)
+  .filter((value): value is number => typeof value === 'number' && Number.isFinite(value))
+  .slice(-32))
+const latency = computed(() => latencySeries.value.at(-1) ?? pingStats.avgLatency.value)
+const packetLoss = computed(() => pingStats.avgLoss.value)
 
 const memoryPercentage = computed(() => getMemoryPercentage(props.node))
 const diskPercentage = computed(() => getDiskPercentage(props.node))

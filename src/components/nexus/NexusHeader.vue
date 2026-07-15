@@ -5,10 +5,12 @@ import { RouterLink, useRoute } from 'vue-router'
 import NexusNetworkSwitch from '@/components/nexus/NexusNetworkSwitch.vue'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { useVisitorAudit } from '@/composables/useVisitorAudit'
 import { useAppStore } from '@/stores/app'
 
 const appStore = useAppStore()
 const route = useRoute()
+const { record } = useVisitorAudit()
 const now = ref(new Date())
 
 const timer = window.setInterval(() => {
@@ -42,6 +44,24 @@ const themeLabel = computed(() => ({
 })[appStore.themeMode])
 const showAdminEntry = computed(() => !appStore.loading
   && (appStore.isLoggedIn || !appStore.hideAdminEntryWhenLoggedOut))
+
+function toggleTheme() {
+  appStore.updateThemeMode()
+  void record({
+    event: 'theme_mode_change',
+    path: route.path,
+    route: String(route.name ?? ''),
+    target: appStore.themeMode,
+  })
+}
+
+function recordAdminEntry() {
+  void record({
+    event: 'admin_entry_click',
+    path: route.path,
+    route: String(route.name ?? ''),
+  })
+}
 </script>
 
 <template>
@@ -76,7 +96,7 @@ const showAdminEntry = computed(() => !appStore.loading
               size="icon"
               class="nexus-icon-button"
               :aria-label="themeLabel"
-              @click="appStore.updateThemeMode()"
+              @click="toggleTheme"
             >
               <Icon :icon="themeIcon" class="size-4.5" />
             </Button>
@@ -109,7 +129,7 @@ const showAdminEntry = computed(() => !appStore.loading
               size="icon"
               class="nexus-icon-button"
             >
-              <a href="/admin" aria-label="打开 Komari 后台">
+              <a href="/admin" aria-label="打开 Komari 后台" @click="recordAdminEntry">
                 <Icon icon="lucide:settings" class="size-4.5" />
               </a>
             </Button>

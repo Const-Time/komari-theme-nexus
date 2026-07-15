@@ -646,6 +646,12 @@ header {
   }
 }
 
+@media (min-width: 1024px) {
+  .nexus-service-track {
+    grid-auto-columns: calc((100% - 2.25rem) / 4);
+  }
+}
+
 .nexus-input {
   width: 100%;
   border: 1px solid var(--input);

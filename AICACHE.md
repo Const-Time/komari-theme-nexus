@@ -13,13 +13,29 @@
 ## 当前任务
 
 - 状态：done
-- 目标：新增可选的色觉友好配色，提前适配 Komari PR #602 的访客审计上报与日志查看能力，并发布 `v3.1.5`。
-- 里程碑：主类 M5 新功能；色觉友好界面属于 M4，访客审计的数据最小化、权限和隐私边界按 M3 执行。
-- 范围：主题托管设置、语义色与图表/Ping 色板；`visitor_audit_enabled` 能力检测；公开访客事件上报、站点隔离安全指纹与操作埋点；AuditLogPanel 的 visitor 过滤、解析和结构化展示；版本/README、构建、推送和 GitHub Release 全流程。
-- 计划：色觉友好 token/色板 -> 访客审计 RPC/service/composable -> 安全指纹与页面操作埋点 -> 审计面板 visitor 视图 -> lint/build/浏览器验证 -> v3.1.5 版本/说明 -> zip/Actions/Release/线上资产验证。
-- 不做：不记录密码、token、Cookie、query value、完整搜索词、WebSSH/剪贴板内容；不上传原始 WebRTC ICE 地址，不调用第三方 STUN，不采集设备 ID、Canvas 或音频指纹；不在核心 `1.2.6` 缺少能力时发送未知 RPC；不改 `package.json.version`，不提交 `.claude/`。
+- 目标：完成 Komari Nexus 首轮稳定性、性能、功能一致性与可访问性优化，并形成可发布的 `v0.1.0` 构建。
+- 里程碑：主类 M2 性能与 M4 UI/UX；权限、访客审计与安全边界按 M3 保持；配置、文档和验证属于 M6。
+- 范围：化解 Nexus 与远端 v3.1.5 分叉；修复 KeepAlive 轮播、历史请求/趋势口径、AUTO 网络模式；清理失效设置并恢复 Nexus 高级工具；完善对话框焦点、配置体积限制、文档和发布验证。
+- 计划：分支重放 -> 数据/状态修复 -> 配置/高级工具 -> 可访问性/体积 -> lint/build/视觉验证 -> 提交与发布审计。
+- 不做：不覆盖远端 `main`，不新增后端、数据库或服务健康探测，不修改 Komari Server/Agent，不记录或暴露敏感访客数据。
 
 ## 执行日志
+
+### 2026-07-15 Nexus optimization
+
+- 已确认原本地 Nexus 提交与 `origin/main` 分叉；创建 `codex/nexus-optimization`，将 Nexus 重放到远端 `e3abeff`，保留 `af32f25` 的色觉辅助、访客审计、图表和详情页改进。
+- 冲突按 Nexus 品牌与新首页为主解决；README、主题身份、Header、HomeView 已恢复 Nexus 基线，未覆盖远端 `main`。
+- 数据链：节点负载历史改走共享 history service / RequestManager，并以 60 秒缓存、15 秒错误重试和 6 小时 96 点上限控制请求；Ping 复用 Metric Store 的 `ping.loss` 分桶结果，不再重复直连 RPC；KeepAlive 失活时暂停历史订阅和探针轮播。
+- 状态与趋势：AUTO / LAN / WAN 三态恢复为可见可操作的单选组，损坏的本地模式自动回退；探针历史随实时状态按缓存周期刷新；总览趋势改为完整节点集合的同口径会话采样，补齐容量和核心数响应依赖。
+- 配置与权限：App store 成为 Nexus 配置规范化入口；设置保存与图标持久化均强制刷新登录权限；服务配置限制为 32 组、64 服务、512 KB，图标限制 16 KB，并严格校验 ID、字段长度、分组引用、完整 HTTP(S) URL 和主机规则数量。
+- 功能一致性：清理 Nexus 首页不再消费的旧托管设置，同时恢复登录后的拓扑、性价比、健康、快照和审计工具；高级工具逐次校验权限并记录访客审计事件。
+- 交互与可访问性：更多服务弹窗改用 reka-ui Dialog，具备焦点锁定、焦点恢复、Esc、遮罩关闭和滚动锁定；服务标签与网络单选支持方向键/Home/End；异步服务列表的滚轮监听、reduced motion、禁用动画设置和桌面四卡布局已补齐。
+- 地球性能：Nexus 默认渲染器改为轻量 cobe；移除 `three/globe.gl` 强制 manual chunk 后，默认首页不再预加载两者，realistic 仍作为按需选项保留；cobe 在停止旋转、页面不可见或 reduced motion 稳定后暂停 RAF。
+- 配置边界验证：完整 HTTP(S) URL、LAN/WAN 缺省回退、危险 scheme、trim 后重复 ID、孤儿分组、主机规则上限和超大配置样例全部通过。
+- 最终静态验证：`bun --bun run lint`、`bun run build`、`vue-tsc --build` 和 `git diff --check` 均通过；构建只有第三方 `@vueuse/core` PURE 注释及按需 realistic 大 chunk 警告。
+- 浏览器验证：生产构建在 1440×1000、1280×800/900、390×844 下覆盖浅/深色、1/2/3/10 节点、0/1/14 服务、离线节点、长名称、设置页和 reduced motion，均无横向溢出或浏览器异常；桌面显示 3 探针、移动端显示 2 探针。
+- 交互验证：Dialog 焦点锁定、10 次 Tab 循环、Esc 关闭与触发器焦点恢复通过；网络单选与服务标签方向键选择/聚焦一致；正常地球 700 ms 记录 43 个 RAF，reduced motion 稳定后 1.2 秒增量为 0。
+- 资源验证：默认首页只请求 `NodeEarthGlobe` / `NodeEarthCobeGlobe`，未请求 `three.module` 或 `globe.gl`；设置页不会加载任何地球资源。
 
 ### 2026-07-15 color-vision-friendly palette / visitor audit preparation
 

@@ -2,6 +2,7 @@
 import { nextTick, onActivated, onDeactivated } from 'vue'
 import MarkdownRenderer from '@/components/MarkdownRenderer.vue'
 import NexusHero from '@/components/nexus/NexusHero.vue'
+import NexusOperations from '@/components/nexus/NexusOperations.vue'
 import NexusProbeCarousel from '@/components/nexus/NexusProbeCarousel.vue'
 import NexusServiceCarousel from '@/components/nexus/NexusServiceCarousel.vue'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -40,5 +41,6 @@ onDeactivated(() => {
     <NexusHero :nodes="nodesStore.visibleNodes" />
     <NexusServiceCarousel />
     <NexusProbeCarousel :nodes="nodesStore.visibleNodes" />
+    <NexusOperations :nodes="nodesStore.visibleNodes" />
   </div>
 </template>

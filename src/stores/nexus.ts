@@ -1,16 +1,15 @@
 import type { NexusConfig, NexusNetworkMode, NexusService, NexusSettingsSnapshot } from '@/types/nexus'
 import { useStorage } from '@vueuse/core'
 import { defineStore } from 'pinia'
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { useAppStore } from '@/stores/app'
 import { getSharedApi } from '@/utils/api'
 import {
-  DEFAULT_LAN_HOST_PATTERNS,
-  parseHostPatterns,
   parseNexusConfig,
   resolveAutomaticNetworkMode,
   resolveServiceUrl,
   serializeNexusConfig,
+  validateHostPatterns,
 } from '@/utils/nexusConfig'
 
 const DEFAULT_PROBE_INTERVAL = 8
@@ -35,25 +34,23 @@ export const useNexusStore = defineStore('nexus', () => {
   const selectedServiceGroup = useStorage<string>('komari-nexus:service-group', 'all')
   const probePage = useStorage<number>('komari-nexus:probe-page', 0)
 
-  const themeSettings = computed<Record<string, unknown>>(() => {
+  const currentThemeSettings = computed<Record<string, unknown>>(() => {
     const value = appStore.publicSettings?.theme_settings
     return value && typeof value === 'object' ? value : {}
   })
 
-  const config = computed<NexusConfig>(() => parseNexusConfig(themeSettings.value.nexusConfig))
+  const config = computed<NexusConfig>(() => appStore.nexusConfig)
   const groups = computed(() => [...config.value.groups]
     .filter(group => group.enabled)
     .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name)))
+  const activeGroupIds = computed(() => new Set(groups.value.map(group => group.id)))
   const services = computed(() => [...config.value.services]
-    .filter(service => service.enabled)
+    .filter(service => service.enabled && (!service.groupId || activeGroupIds.value.has(service.groupId)))
     .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name)))
   const featuredServices = computed(() => services.value.filter(service => service.featured))
 
-  const lanHostPatterns = computed(() => parseHostPatterns(
-    themeSettings.value.nexusLanHostPatterns,
-    DEFAULT_LAN_HOST_PATTERNS,
-  ))
-  const wanHostPatterns = computed(() => parseHostPatterns(themeSettings.value.nexusWanHostPatterns))
+  const lanHostPatterns = computed(() => appStore.nexusLanHostPatterns)
+  const wanHostPatterns = computed(() => appStore.nexusWanHostPatterns)
 
   const automaticNetworkMode = computed<'lan' | 'wan'>(() => {
     const hostname = typeof window === 'undefined' ? '' : window.location.hostname
@@ -63,7 +60,7 @@ export const useNexusStore = defineStore('nexus', () => {
     networkMode.value === 'auto' ? automaticNetworkMode.value : networkMode.value,
   )
 
-  const managedProbeAutoplay = computed(() => readBoolean(themeSettings.value.nexusProbeAutoplay, true))
+  const managedProbeAutoplay = computed(() => readBoolean(appStore.nexusProbeAutoplay, true))
   const probeAutoplay = computed({
     get: () => probeAutoplayPreference.value === 'default'
       ? managedProbeAutoplay.value
@@ -72,7 +69,12 @@ export const useNexusStore = defineStore('nexus', () => {
       probeAutoplayPreference.value = enabled ? 'enabled' : 'disabled'
     },
   })
-  const probeInterval = computed(() => readInterval(themeSettings.value.nexusProbeInterval))
+  const probeInterval = computed(() => readInterval(appStore.nexusProbeInterval))
+
+  watch(networkMode, (mode) => {
+    if (mode !== 'auto' && mode !== 'lan' && mode !== 'wan')
+      networkMode.value = 'auto'
+  }, { immediate: true })
 
   function serviceUrl(service: NexusService): string {
     return resolveServiceUrl(service, effectiveNetworkMode.value)
@@ -92,15 +94,15 @@ export const useNexusStore = defineStore('nexus', () => {
   }
 
   async function saveSettings(snapshot: NexusSettingsSnapshot): Promise<void> {
-    if (!appStore.isLoggedIn)
+    if (!await appStore.requireLoginPermission('nexusSettings', { force: true }))
       throw new Error('请先登录 Komari 后台再保存 Nexus 设置')
 
     const theme = appStore.publicSettings?.theme || 'nexus'
     const nextSettings: Record<string, unknown> = {
-      ...themeSettings.value,
+      ...currentThemeSettings.value,
       nexusConfig: serializeNexusConfig(snapshot.config),
-      nexusLanHostPatterns: parseHostPatterns(snapshot.lanHostPatterns).join(','),
-      nexusWanHostPatterns: parseHostPatterns(snapshot.wanHostPatterns).join(','),
+      nexusLanHostPatterns: validateHostPatterns(snapshot.lanHostPatterns).join(','),
+      nexusWanHostPatterns: validateHostPatterns(snapshot.wanHostPatterns).join(','),
       nexusProbeAutoplay: snapshot.probeAutoplay,
       nexusProbeInterval: readInterval(snapshot.probeInterval),
     }
@@ -111,7 +113,7 @@ export const useNexusStore = defineStore('nexus', () => {
   }
 
   async function saveServiceIcon(serviceId: string, icon: string): Promise<boolean> {
-    if (!appStore.isLoggedIn)
+    if (!await appStore.requireLoginPermission('nexusSettings', { force: true }))
       throw new Error('请先登录 Komari 后台再保存图标')
 
     const nextConfig = parseNexusConfig(config.value)
@@ -122,7 +124,7 @@ export const useNexusStore = defineStore('nexus', () => {
     service.icon = icon
     const theme = appStore.publicSettings?.theme || 'nexus'
     const nextSettings: Record<string, unknown> = {
-      ...themeSettings.value,
+      ...currentThemeSettings.value,
       nexusConfig: serializeNexusConfig(nextConfig),
     }
 

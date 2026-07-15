@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { NexusConfig, NexusService, NexusSettingsSnapshot } from '@/types/nexus'
 import { Icon } from '@iconify/vue'
-import { computed, ref, watch, watchEffect } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import NexusServiceIcon from '@/components/nexus/NexusServiceIcon.vue'
 import { Button } from '@/components/ui/button'
@@ -9,13 +9,21 @@ import { Empty } from '@/components/ui/empty'
 import { useAppStore } from '@/stores/app'
 import { useNexusStore } from '@/stores/nexus'
 import { useNodesStore } from '@/stores/nodes'
-import { createNexusId, parseHostPatterns, parseNexusConfig } from '@/utils/nexusConfig'
+import {
+  createNexusId,
+  NEXUS_MAX_GROUPS,
+  NEXUS_MAX_SERVICES,
+  parseHostPatterns,
+  parseNexusConfig,
+  validateHostPatterns,
+} from '@/utils/nexusConfig'
 import { compressServiceIcon, discoverServiceIcon } from '@/utils/nexusIcon'
 
 const appStore = useAppStore()
 const nexusStore = useNexusStore()
 const nodesStore = useNodesStore()
 const saving = ref(false)
+const accessGranted = ref(false)
 const iconTask = ref<{ action: 'discover' | 'upload', serviceId: string } | null>(null)
 const initialSnapshot = ref('')
 const draftConfig = ref<NexusConfig>(parseNexusConfig(nexusStore.config))
@@ -24,8 +32,9 @@ const wanPatternsText = ref(nexusStore.wanHostPatterns.join('\n'))
 const probeAutoplay = ref(nexusStore.probeAutoplay)
 const probeInterval = ref(nexusStore.probeInterval)
 
-watchEffect(() => {
-  if (!appStore.loading && !appStore.isLoggedIn)
+onMounted(async () => {
+  accessGranted.value = await appStore.requireLoginPermission('nexusSettings', { force: true })
+  if (!accessGranted.value)
     window.location.replace('/admin')
 })
 
@@ -66,6 +75,10 @@ function normalizeOrder<T extends { order: number }>(items: T[]) {
 }
 
 function addGroup() {
+  if (draftConfig.value.groups.length >= NEXUS_MAX_GROUPS) {
+    window.$message.warning(`服务分组不能超过 ${NEXUS_MAX_GROUPS} 个`)
+    return
+  }
   draftConfig.value.groups.push({
     id: createNexusId('group'),
     name: '新分组',
@@ -97,6 +110,10 @@ function moveGroup(id: string, direction: -1 | 1) {
 }
 
 function addService() {
+  if (draftConfig.value.services.length >= NEXUS_MAX_SERVICES) {
+    window.$message.warning(`服务不能超过 ${NEXUS_MAX_SERVICES} 个`)
+    return
+  }
   draftConfig.value.services.push({
     id: createNexusId('service'),
     name: '新服务',
@@ -227,9 +244,9 @@ async function save() {
   saving.value = true
   try {
     const snapshot: NexusSettingsSnapshot = {
-      config: parseNexusConfig(draftConfig.value),
-      lanHostPatterns: parseHostPatterns(lanPatternsText.value),
-      wanHostPatterns: parseHostPatterns(wanPatternsText.value),
+      config: structuredClone(draftConfig.value),
+      lanHostPatterns: validateHostPatterns(lanPatternsText.value),
+      wanHostPatterns: validateHostPatterns(wanPatternsText.value),
       probeAutoplay: probeAutoplay.value,
       probeInterval: Number(probeInterval.value),
     }
@@ -247,7 +264,7 @@ async function save() {
 </script>
 
 <template>
-  <div v-if="appStore.isLoggedIn" class="mx-auto w-full max-w-[1120px] px-4 pb-14 pt-5 sm:px-6 lg:px-7">
+  <div v-if="accessGranted" class="mx-auto w-full max-w-[1120px] px-4 pb-14 pt-5 sm:px-6 lg:px-7">
     <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
       <div class="flex min-w-0 items-center gap-3">
         <Button as-child variant="ghost" size="icon" aria-label="返回首页" title="返回首页">
@@ -307,7 +324,7 @@ async function save() {
         <h2 id="group-settings-title" class="text-lg font-semibold text-foreground">
           服务分组
         </h2>
-        <Button size="sm" variant="outline" @click="addGroup">
+        <Button size="sm" variant="outline" :disabled="sortedGroups.length >= NEXUS_MAX_GROUPS" @click="addGroup">
           <Icon icon="lucide:plus" class="size-4" />
           新建分组
         </Button>
@@ -338,7 +355,7 @@ async function save() {
         <h2 id="service-settings-title" class="text-lg font-semibold text-foreground">
           服务管理
         </h2>
-        <Button size="sm" @click="addService">
+        <Button size="sm" :disabled="sortedServices.length >= NEXUS_MAX_SERVICES" @click="addService">
           <Icon icon="lucide:plus" class="size-4" />
           新增服务
         </Button>
@@ -449,5 +466,9 @@ async function save() {
         </article>
       </div>
     </section>
+  </div>
+  <div v-else class="flex min-h-[50vh] items-center justify-center text-sm text-muted-foreground" role="status" aria-live="polite">
+    <Icon icon="lucide:loader-circle" class="mr-2 size-4 animate-spin motion-reduce:animate-none" />
+    正在验证访问权限
   </div>
 </template>
