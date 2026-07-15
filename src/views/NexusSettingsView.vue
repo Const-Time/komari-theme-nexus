@@ -3,6 +3,7 @@ import type { NexusConfig, NexusService, NexusSettingsSnapshot } from '@/types/n
 import { Icon } from '@iconify/vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
+import NexusIconPicker from '@/components/nexus/NexusIconPicker.vue'
 import NexusServiceIcon from '@/components/nexus/NexusServiceIcon.vue'
 import { Button } from '@/components/ui/button'
 import { Empty } from '@/components/ui/empty'
@@ -24,7 +25,9 @@ const nexusStore = useNexusStore()
 const nodesStore = useNodesStore()
 const saving = ref(false)
 const accessGranted = ref(false)
-const iconTask = ref<{ action: 'discover' | 'upload', serviceId: string } | null>(null)
+const iconTask = ref<{ action: 'discover' | 'online' | 'upload', serviceId: string } | null>(null)
+const iconPickerOpen = ref(false)
+const iconPickerServiceId = ref('')
 const initialSnapshot = ref('')
 const draftConfig = ref<NexusConfig>(parseNexusConfig(nexusStore.config))
 const lanPatternsText = ref(nexusStore.lanHostPatterns.join('\n'))
@@ -60,6 +63,7 @@ function resetDraft() {
 const dirty = computed(() => snapshotString() !== initialSnapshot.value)
 const sortedGroups = computed(() => [...draftConfig.value.groups].sort((a, b) => a.order - b.order))
 const sortedServices = computed(() => [...draftConfig.value.services].sort((a, b) => a.order - b.order))
+const iconPickerService = computed(() => draftConfig.value.services.find(service => service.id === iconPickerServiceId.value) ?? null)
 
 watch(() => nexusStore.config, () => {
   if (!dirty.value)
@@ -174,11 +178,20 @@ function markServiceIconSaved(serviceId: string, icon: string) {
 }
 
 async function persistServiceIcon(service: NexusService, icon: string): Promise<boolean> {
+  const previousIcon = service.icon
   updateService(service.id, 'icon', icon)
-  const persisted = await nexusStore.saveServiceIcon(service.id, icon)
-  if (persisted)
-    markServiceIconSaved(service.id, icon)
-  return persisted
+  try {
+    const persisted = await nexusStore.saveServiceIcon(service.id, icon)
+    if (persisted)
+      markServiceIconSaved(service.id, icon)
+    return persisted
+  }
+  catch (error) {
+    const currentService = draftConfig.value.services.find(item => item.id === service.id)
+    if (currentService?.icon === icon)
+      updateService(service.id, 'icon', previousIcon)
+    throw error
+  }
 }
 
 function iconUploadInputId(serviceId: string): string {
@@ -191,6 +204,34 @@ function openIconUpload(serviceId: string) {
     return
   input.value = ''
   input.click()
+}
+
+function openIconPicker(serviceId: string) {
+  if (isIconBusy())
+    return
+  iconPickerServiceId.value = serviceId
+  iconPickerOpen.value = true
+}
+
+async function selectOnlineIcon(icon: string) {
+  const service = iconPickerService.value
+  if (!service || isIconBusy())
+    return
+
+  iconTask.value = { action: 'online', serviceId: service.id }
+  try {
+    const persisted = await persistServiceIcon(service, icon)
+    if (persisted)
+      window.$message.success(`${service.name || '服务'}图标已选择并保存`)
+    else
+      window.$message.warning(`${service.name || '服务'}图标已选择，请保存新服务后生效`)
+  }
+  catch (error) {
+    window.$message.error(error instanceof Error ? error.message : '选择或保存图标失败')
+  }
+  finally {
+    iconTask.value = null
+  }
 }
 
 async function autoDiscoverIcon(service: NexusService) {
@@ -391,7 +432,7 @@ async function save() {
             </label>
             <div class="grid gap-1.5 text-xs font-medium text-muted-foreground sm:col-span-2">
               <span>图标</span>
-              <div data-nexus-icon-controls class="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
+              <div data-nexus-icon-controls class="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto_auto]">
                 <input
                   :value="service.icon"
                   class="nexus-input col-span-2 h-10 min-w-0 text-sm text-foreground sm:col-span-1"
@@ -399,6 +440,14 @@ async function save() {
                   :aria-label="`${service.name || '服务'}图标地址`"
                   @input="updateService(service.id, 'icon', ($event.target as HTMLInputElement).value)"
                 >
+                <Button type="button" variant="outline" size="sm" class="col-span-2 h-10 sm:col-span-1" :disabled="isIconBusy()" @click="openIconPicker(service.id)">
+                  <Icon
+                    :icon="iconTask?.serviceId === service.id && iconTask.action === 'online' ? 'lucide:loader-circle' : 'lucide:search'"
+                    class="size-4"
+                    :class="{ 'animate-spin': iconTask?.serviceId === service.id && iconTask.action === 'online' }"
+                  />
+                  在线图库
+                </Button>
                 <Button type="button" variant="outline" size="sm" class="h-10" :disabled="isIconBusy()" @click="autoDiscoverIcon(service)">
                   <Icon
                     :icon="iconTask?.serviceId === service.id && iconTask.action === 'discover' ? 'lucide:loader-circle' : 'lucide:wand-sparkles'"
@@ -466,6 +515,14 @@ async function save() {
         </article>
       </div>
     </section>
+
+    <NexusIconPicker
+      v-if="iconPickerService"
+      v-model:open="iconPickerOpen"
+      :service-name="iconPickerService.name"
+      :current-icon="iconPickerService.icon"
+      @select="selectOnlineIcon"
+    />
   </div>
   <div v-else class="flex min-h-[50vh] items-center justify-center text-sm text-muted-foreground" role="status" aria-live="polite">
     <Icon icon="lucide:loader-circle" class="mr-2 size-4 animate-spin motion-reduce:animate-none" />

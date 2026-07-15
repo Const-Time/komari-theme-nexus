@@ -49,6 +49,8 @@ watch(() => props.icon, () => {
       :alt="name"
       class="absolute inset-0 size-full object-cover"
       :class="imageLoaded ? 'opacity-100' : 'opacity-0'"
+      loading="lazy"
+      referrerpolicy="no-referrer"
       @load="imageLoaded = true"
       @error="imageError = true"
     >

@@ -13,13 +13,22 @@
 ## 当前任务
 
 - 状态：done
-- 目标：完成 Komari Nexus 首轮稳定性、性能、功能一致性与可访问性优化，并形成可发布的 `v0.1.0` 构建。
-- 里程碑：主类 M2 性能与 M4 UI/UX；权限、访客审计与安全边界按 M3 保持；配置、文档和验证属于 M6。
-- 范围：化解 Nexus 与远端 v3.1.5 分叉；修复 KeepAlive 轮播、历史请求/趋势口径、AUTO 网络模式；清理失效设置并恢复 Nexus 高级工具；完善对话框焦点、配置体积限制、文档和发布验证。
-- 计划：分支重放 -> 数据/状态修复 -> 配置/高级工具 -> 可访问性/体积 -> lint/build/视觉验证 -> 提交与发布审计。
-- 不做：不覆盖远端 `main`，不新增后端、数据库或服务健康探测，不修改 Komari Server/Agent，不记录或暴露敏感访客数据。
+- 目标：为 Nexus 服务编辑器增加类似 Sun-Panel 的 Iconify 在线图标库搜索、预览和选择能力。
+- 里程碑：M5 新功能；同步补充 M6 文档与验证记录。
+- 范围：复用现有 `@iconify/vue` 和服务 `icon` 字段；新增 Iconify 搜索 service/composable/选择器；接入现有权限校验和图标保存流程；保留手填、favicon 自动获取与本地上传。
+- 计划：确认 Iconify API 契约 -> 搜索与缓存层 -> 可访问选择器 -> 设置页接入 -> lint/build/交互验证。
+- 不做：不新增图标组件包，不把完整图标集打进 bundle，不修改配置 schema/version，不新增后端或服务探测，不发布或推送。
 
 ## 执行日志
+
+### 2026-07-15 Iconify 在线图标库
+
+- 按 M5 新功能完成 `Component -> Composable -> Service -> RequestManager / SharedCache -> Iconify API` 分层；继续复用服务 `icon` 字符串与 `@iconify/vue`，没有修改配置 schema、主题版本或发布契约，也没有把完整 `@iconify/json` 打进运行时。
+- 新增共享在线图标选择器：提供 31 个常用服务图标、关键词搜索、全部/品牌/Tabler/Lucide/Material Design 图标集筛选、分页加载、当前图标标记、错误重试与外部 Iconify 图标站入口；搜索结果通过模块级共享 IntersectionObserver 按可视区域挂载预览，避免全库搜索一次触发全部离屏图标请求。
+- 搜索仅在管理员主动输入关键词后请求官方 `https://api.iconify.design/search`；不自动上传服务名称、不保存搜索词，请求使用 `credentials: omit` 与 `referrerPolicy: no-referrer`，并限制查询长度、结果数量、超时和缓存 TTL。
+- 搜索 composable 包含 300 ms 防抖、旧响应隔离、请求取消和最多 256 项分页；选择器支持桌面/移动响应式网格、焦点锁定与恢复、Esc、方向键、Home/End，弹窗层级覆盖全局 BackTop。
+- 选择结果复用现有 `saveServiceIcon` 权限复验与持久化流程；已有服务立即保存且失败时按当前草稿状态安全回滚，新建未持久化服务保留到草稿并提示用户。手填 Iconify 名称、图片地址、favicon 自动获取和本地上传入口保持兼容。
+- 远程图片渲染补充延迟加载和 `no-referrer`；README 已补充在线图标库能力说明。
 
 ### 2026-07-15 Nexus optimization
 
@@ -207,6 +216,8 @@
 
 ## 验证记录
 
+- 2026-07-15 Iconify 在线图标库：`bun --bun run lint`、`bun run build`、`git diff --check` 通过；普通 `bun run lint` 在当前系统 Node 缺少 `Object.groupBy` 时无法加载 ESLint 配置，改用仓库要求的 Bun runtime 后通过。构建生成 `dist/` 与 `komari-theme-nexus-build-6917d2c.zip`，zip 顶层保持 `komari-theme.json`、`preview.png`、`dist/`，包内版本仍为 `0.1.0`，产物未引用 `@iconify/json`。真实 Iconify API 校验 CORS 与搜索返回正常，31 个常用图标名称均存在。Playwright 在 1440x900、390x844、320x700 下验证真实搜索、图标集筛选、64 -> 128 分页、键盘导航、首次焦点、Esc/关闭焦点恢复、BackTop 层级与保存；首屏只挂载 15/64 个 SVG，滚动后 64/64 加载。分页连续两次 500 后保留首批结果并从 `start=64&limit=128` 成功重试；保存 POST 500 后输入和卡片预览均回滚，正常保存仅发出 1 次请求并保留服务其他字段；禁用页面动画时 Dialog/Overlay 的动画与过渡为 none/0s。除故意模拟的 500 外无横向溢出、page error、console error 或 failed request。构建仍只有既有 `@vueuse/core` PURE 注释与按需 realistic 大 chunk 警告。
+
 - 2026-07-14 v3.1.4 Issue #18 release：`bun run lint`、`bun run build`、`git diff --check` 通过；发布提交 `91c9b06` 已推送 `main`，Actions run `#29312369165`（#49）成功，tag / Release target 均为完整提交 `91c9b06fc5c4b5ee2636dc18779861186806abd7`，Issue #18 已关闭。线上 zip `komari-theme-Glassmorphism-build-91c9b06.zip` 大小 5,114,852 bytes，SHA-256 `f8b4c9b6f61cc66d755d7a612357d16d1d2774f9494b9b0c3ce87e572ee5da9b`，下载复核顶层结构 `komari-theme.json`、`preview.png`、`dist/`，包内版本 `3.1.4`。构建仍只有既有 `@vueuse/core` PURE 注释与 `globe` 大 chunk 警告。
 - 2026-07-14 v3.1.3 release：发布提交 `4f37416` 已推送 `main`；GitHub Actions run `#29311122789` 成功。Release `v3.1.3` 为正式发布（非 draft / prerelease），target 为完整提交 `4f3741692bd81141ed542614d5b31a01ff0dc0fc`，zip 资产 `komari-theme-Glassmorphism-build-4f37416.zip` 上传状态为 `uploaded`。下载复核：大小 5,120,783 bytes，SHA-256 `f4d5f1be0c769ffc5372ab6a9b780042768f82529827b7222a843ef642605bee`，顶层结构 `komari-theme.json`、`preview.png`、`dist/`，包内版本 `3.1.3`。
 - 2026-07-14 v3.1.0 release：发布提交 `14dac71` 已推送 `main`；GitHub Actions run `#42` 成功。Release `v3.1.0` 为正式发布（非 draft / prerelease），target 为完整提交 `14dac711d3e1ad1e7963c6dc2609ab6d1921f82d`，zip 资产上传状态为 `uploaded`。
@@ -228,6 +239,12 @@
 - 2026-07-13 v3.0.0 frontend follow-up / AuditLogPanel：`bun run lint` 通过；`bun run build` 通过，生成 `dist/` 与 `komari-theme-Glassmorphism-build-6ccc9d7.zip`。构建仍有既有 `@vueuse/core` PURE 注释警告与 `globe` chunk 超过 600 kB 警告。
 - 2026-07-13 v3.0.2 home card cleanup：按用户反馈移除首页 NodeCard 的物理核心文案和磁盘“数据积累中”提示，HealthSummaryPanel 也不再输出该提示；详情页 LoadChart 磁盘模块继续显示磁盘预测和样本不足原因；`bun run lint && bun run build` 通过，生成 `dist/` 与本地 `komari-theme-Glassmorphism-build-7be6c21.zip`（提交前短 SHA）。构建仍有既有 `@vueuse/core` PURE 注释警告与 `globe` chunk 超过 600 kB 警告。
 - 2026-07-13 chunk/request pressure follow-up：同步 `origin/main` 后首次 `bun run lint && bun run build` 因远端 README 标题从 H1 跳到 H3 触发 `markdown/heading-increment` 失败；已将副标题改为 H2 并同步 README 当前版本为 v3.0.3。重跑 `bun run lint && bun run build` 通过；构建输出新增 `assets/v3-services-*.js`（约 54.67 kB / gzip 18.22 kB），用于合并 v3 共享服务/工具模块；生成 `dist/` 与 `komari-theme-Glassmorphism-build-94691f1.zip`（提交前短 SHA）。构建仍有既有 `@vueuse/core` PURE 注释警告与 `globe` chunk 超过 600 kB 警告。已提交并推送 main：commit `8b40b59`；GitHub release workflow #29231673966 成功；Release `v3.0.3` 已发布，资产为 `komari-theme-Glassmorphism-build-8b40b59.zip`。
+
+## 本轮交接（Iconify 在线图标库）
+
+- 已完成：在线搜索、常用图标、图标集筛选、分页、可访问键盘操作、移动端布局、权限内保存、README 与验证记录。
+- 未完成：无代码阻断项；未修改版本、未提交、未推送、未发布。
+- 运行边界：在线检索与首次加载未缓存的 Iconify 图标依赖网络；断网时仍可使用手填、favicon 自动获取或本地上传。真实 Komari 环境需以已登录管理员身份进入 `/nexus-settings`。
 
 ## 风险点
 
