@@ -1,14 +1,14 @@
 {
-  "name": "Komari Glassmorphism",
-  "short": "Glassmorphism",
-  "description": "A Glassmorphism theme for Komari",
-  "version": "3.1.5",
-  "author": "sanrokamlan",
-  "url": "https://github.com/sanrokamlan-prog/komari-theme-Glassmorphism",
+  "name": "Komari Nexus",
+  "short": "nexus",
+  "description": "A unified monitoring dashboard combining Komari node monitoring and personal service navigation.",
+  "version": "0.1.0",
+  "author": "sanrokamlan; Komari Nexus customization by Const-Time",
+  "url": "https://github.com/Const-Time/komari-theme-nexus",
   "preview": "preview.png",
   "configuration": {
     "type": "managed",
-    "name": "Glassmorphism 设置",
+    "name": "Nexus 设置",
     "data": [
       { "name": "01 · 基础与外观", "type": "title" },
       { "key": "themeMode", "name": "默认主题模式", "type": "select", "default": "beijing", "options": "beijing,light,dark", "help": "beijing=北京时间自动； light=亮色； dark=暗色。" },
@@ -67,7 +67,14 @@
       { "key": "chartDashboardPreset", "name": "详情负载图方案", "type": "select", "default": "默认", "options": "默认,精简,资源,网络,GPU,延迟,运维,完整,自定义", "help": "资源、网络、GPU、延迟和运维按指标族组合；完整覆盖官方 25 个指标。自定义读取下方 keys。" },
       { "key": "chartDashboardTemplate", "name": "自定义详情图表 keys", "type": "richtext", "default": "cpu\nmemory\ndisk\nnetwork\ngpu\nconnections\nprocess", "help": "逗号、空格或换行分隔。 cpu=CPU/负载； memory=RAM/Swap及总量； disk=磁盘/总量； network=实时上下行； traffic=累计与周期流量； gpu=GPU/设备利用率； gpuMemory=GPU显存/总量； temperature=系统/GPU温度； connections=TCP/UDP； process=进程； ping=Ping延迟； pingLoss=Ping丢包。旧 JSON 仍兼容。" },
 
-      { "name": "08 · 自定义背景", "type": "title" },
+      { "name": "Nexus 服务导航", "type": "title" },
+      { "key": "nexusConfig", "name": "服务导航配置", "type": "string", "default": "{\"version\":1,\"groups\":[],\"services\":[]}", "help": "由主题内 Nexus 设置页面维护的服务分组与服务 JSON 配置。" },
+      { "key": "nexusLanHostPatterns", "name": "内网主机匹配", "type": "string", "default": "localhost,127.0.0.1,*.local,10.*,192.168.*,172.16.*,172.17.*,172.18.*,172.19.*,172.20.*,172.21.*,172.22.*,172.23.*,172.24.*,172.25.*,172.26.*,172.27.*,172.28.*,172.29.*,172.30.*,172.31.*", "help": "自动模式下用于识别内网访问的主机名规则，英文逗号分隔，支持 * 通配符。" },
+      { "key": "nexusWanHostPatterns", "name": "外网主机匹配", "type": "string", "default": "", "help": "自动模式下明确识别为外网的主机名规则，英文逗号分隔，支持 * 通配符。" },
+      { "key": "nexusProbeAutoplay", "name": "探针自动轮播", "type": "switch", "default": true, "help": "首页探针面板默认是否自动轮播。访客仍可在当前浏览器单独切换。" },
+      { "key": "nexusProbeInterval", "name": "探针轮播间隔", "type": "number", "default": 8, "help": "探针自动轮播间隔，单位：秒（3-60）。" },
+
+      { "name": "09 · 自定义背景", "type": "title" },
       { "key": "backgroundEnabled", "name": "启用自定义背景", "type": "switch", "default": false, "help": "启用后可设置自定义图片或视频作为页面背景" },
       { "key": "backgroundType", "name": "背景类型", "type": "select", "default": "image", "options": "image,video", "help": "image=图片； video=视频。" },
       { "key": "lightBackgroundUrl", "name": "亮色模式背景地址", "type": "string", "default": "", "help": "亮色模式下的背景图片/视频 URL" },

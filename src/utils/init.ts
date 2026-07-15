@@ -36,6 +36,7 @@ const DEFAULT_CONFIG: Required<InitConfig> = {
 }
 
 const CLIENTS_REFRESH_INTERVAL_MS = REALTIME_CONFIG.polling.clientsRefreshInterval
+const PRIVATE_SITE_ERROR_REGEX = /private site|login first/i
 
 /** 初始化状态管理 */
 class InitManager {
@@ -104,10 +105,18 @@ class InitManager {
    * 独立执行启动请求，避免任一请求失败阻断其他初始化任务。
    */
   private async runStartupRequests(): Promise<boolean> {
-    const [healthResult, , , nodesResult] = await Promise.allSettled([
-      this.healthCheck(),
+    await Promise.allSettled([
       this.fetchPublicSettings(),
       this.fetchUserInfo(),
+    ])
+
+    if (this.destroyed || this.redirectingToAdmin)
+      return false
+    if (this.redirectPrivateSiteGuest())
+      return false
+
+    const [healthResult, nodesResult] = await Promise.allSettled([
+      this.healthCheck(),
       this.fetchNodesData(),
     ])
 
@@ -160,12 +169,9 @@ class InitManager {
         return
       }
       catch (error) {
-        if (error instanceof RpcError && error.code === 401) {
+        if (error instanceof RpcError && (error.code === 401 || PRIVATE_SITE_ERROR_REGEX.test(error.message))) {
           console.warn('[InitManager] Private site detected, redirecting to /admin')
-          this.redirectingToAdmin = true
-          this.appStore.updateLoginState(false)
-          this.appStore.loading = false
-          location.href = '/admin'
+          this.redirectToAdmin()
           return
         }
 
@@ -183,6 +189,22 @@ class InitManager {
 
     console.error('[InitManager] Health check failed after retries:', lastError)
     throw new Error('Backend service unavailable')
+  }
+
+  private redirectPrivateSiteGuest(): boolean {
+    if (!this.appStore.publicSettings?.private_site || this.appStore.isLoggedIn)
+      return false
+
+    console.warn('[InitManager] Private site requires login, redirecting to /admin')
+    this.redirectToAdmin()
+    return true
+  }
+
+  private redirectToAdmin(): void {
+    this.redirectingToAdmin = true
+    this.appStore.updateLoginState(false)
+    this.appStore.loading = false
+    window.location.replace('/admin')
   }
 
   /**

@@ -9,7 +9,7 @@ import {
   useRafFn,
 } from '@vueuse/core'
 import createGlobe from 'cobe'
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useNodeGeoClusters } from '@/composables/useNodeGeoClusters'
 import { useAppStore } from '@/stores/app'
 
@@ -259,25 +259,6 @@ function startGlobe() {
     resumeRaf()
 }
 
-async function stopGlobe() {
-  pauseRaf()
-  await nextTick()
-  globe?.destroy()
-  globe = null
-  if (canvasRef.value && containerRef.value) {
-    const cobeWrapper = canvasRef.value.parentElement
-    if (cobeWrapper && cobeWrapper !== containerRef.value) {
-      containerRef.value.appendChild(canvasRef.value)
-      cobeWrapper.remove()
-    }
-  }
-}
-
-async function rebuildGlobe() {
-  await stopGlobe()
-  startGlobe()
-}
-
 onMounted(() => {
   startGlobe()
 })
@@ -288,8 +269,20 @@ onBeforeUnmount(() => {
   globe = null
 })
 
-watch(() => appStore.isDark, async () => {
-  await rebuildGlobe()
+watch(() => appStore.isDark, () => {
+  if (!globe)
+    return
+  const colors = themeColors.value
+  globe.update({
+    dark: colors.dark,
+    mapBrightness: colors.mapBrightness,
+    baseColor: colors.baseColor,
+    markerColor: colors.markerColor,
+    glowColor: colors.glowColor,
+  })
+  triggerStaticRedrawWindow()
+  updateGlobeFrame()
+  applyLabelStyles()
 })
 
 watch(
@@ -366,7 +359,7 @@ function onPointerUp(e: PointerEvent) {
 </script>
 
 <template>
-  <div ref="containerRef" class="relative aspect-square w-full max-w-md mx-auto -translate-y-6 md:-translate-y-12">
+  <div ref="containerRef" class="relative aspect-square w-full max-w-md mx-auto">
     <canvas
       ref="canvasRef"
       class="earth-globe-canvas absolute inset-0 w-full h-full select-none touch-none cursor-grab active:cursor-grabbing"

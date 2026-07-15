@@ -134,27 +134,7 @@ onUnmounted(() => {
   <div class="background-container" :style="backgroundContainerStyle">
     <Transition name="fade">
       <div v-if="showDefaultBackground" class="default-background">
-        <div class="default-background__spotlight">
-          <div class="default-background__emerald-surface">
-            <svg
-              aria-hidden="true"
-              class="default-background__pattern"
-            >
-              <defs>
-                <pattern id="glassmorphism-emerald-grid" width="72" height="56" patternUnits="userSpaceOnUse" x="-12" y="4">
-                  <path d="M.5 56V.5H72" fill="none" />
-                </pattern>
-              </defs>
-              <rect width="100%" height="100%" stroke-width="0" fill="url(#glassmorphism-emerald-grid)" />
-              <svg x="-12" y="4" class="default-background__pattern-blocks">
-                <rect stroke-width="0" width="73" height="57" x="288" y="168" />
-                <rect stroke-width="0" width="73" height="57" x="144" y="56" />
-                <rect stroke-width="0" width="73" height="57" x="504" y="168" />
-                <rect stroke-width="0" width="73" height="57" x="720" y="336" />
-              </svg>
-            </svg>
-          </div>
-        </div>
+        <div class="default-background__nexus-surface" />
       </div>
     </Transition>
     <Transition name="fade">
@@ -202,83 +182,28 @@ onUnmounted(() => {
   position: absolute;
   inset: 0;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 50% 0%, rgb(16 185 129 / 0.12), transparent 38%),
-    linear-gradient(180deg, rgb(226 232 240), rgb(203 213 225));
-  transform: scale(1.5);
-  transform-origin: top center;
+  background: rgb(247 250 255);
 }
 
 .dark .default-background {
-  background: rgb(15 23 42 / 0.5);
+  background: rgb(2 8 23);
 }
 
-.default-background__spotlight,
-.default-background__emerald-surface,
-.default-background__pattern,
-.default-background__pattern-blocks {
+.default-background__nexus-surface {
   position: absolute;
-}
-
-.default-background__spotlight {
-  top: 0;
-  left: 50%;
-  width: 81.25rem;
-  height: 25rem;
-  margin-left: -38rem;
-  pointer-events: none;
-}
-
-.dark .default-background__spotlight {
-  -webkit-mask-image: linear-gradient(white, transparent);
-  mask-image: linear-gradient(white, transparent);
-}
-
-.default-background__emerald-surface {
   inset: 0;
   overflow: hidden;
-  background: linear-gradient(90deg, rgb(16 185 129 / 0.18), rgb(190 242 100 / 0.16));
-  opacity: 0.28;
-  -webkit-mask-image: radial-gradient(farthest-side at top, white, transparent);
-  mask-image: radial-gradient(farthest-side at top, white, transparent);
+  background:
+    linear-gradient(135deg, rgb(37 132 232 / 0.12) 0%, transparent 42%),
+    linear-gradient(315deg, rgb(34 169 93 / 0.07) 0%, transparent 46%),
+    linear-gradient(180deg, rgb(253 254 255) 0%, rgb(232 243 255) 54%, rgb(247 251 255) 100%);
 }
 
-.dark .default-background__emerald-surface {
-  background: linear-gradient(90deg, rgb(16 185 129 / 0.3), rgb(190 242 100 / 0.3));
-  opacity: 1;
-}
-
-.default-background__pattern {
-  inset-inline: 0;
-  top: -50%;
-  width: 100%;
-  height: 200%;
-  fill: rgb(0 0 0 / 0.4);
-  stroke: rgb(0 0 0 / 0.5);
-  mix-blend-mode: overlay;
-  transform: skewY(-18deg);
-}
-
-.dark .default-background__pattern {
-  fill: rgb(255 255 255 / 0.025);
-  stroke: rgb(255 255 255 / 0.05);
-}
-
-.default-background__pattern-blocks {
-  overflow: visible;
-}
-
-@media (max-width: 768px) {
-  .default-background {
-    transform: scale(1.25);
-  }
-
-  .default-background__spotlight {
-    left: 50%;
-    width: 60rem;
-    height: 22rem;
-    margin-left: -30rem;
-  }
+.dark .default-background__nexus-surface {
+  background:
+    linear-gradient(135deg, rgb(56 161 255 / 0.13) 0%, transparent 40%),
+    linear-gradient(315deg, rgb(57 209 111 / 0.06) 0%, transparent 44%),
+    linear-gradient(180deg, rgb(2 8 23) 0%, rgb(5 21 40) 52%, rgb(2 9 22) 100%);
 }
 
 .background-loading {

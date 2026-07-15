@@ -13,6 +13,11 @@ const router = createRouter({
       name: 'instance-detail',
       component: () => import('@/views/InstanceDetail.vue'),
     },
+    {
+      path: '/nexus-settings',
+      name: 'nexus-settings',
+      component: () => import('@/views/NexusSettingsView.vue'),
+    },
   ],
 })
 

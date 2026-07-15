@@ -9,6 +9,7 @@ lerna-debug.log*
 
 node_modules
 .DS_Store
+*:Zone.Identifier
 dist
 dist-ssr
 coverage
@@ -42,4 +43,3 @@ __screenshots__/
 
 # Theme build output
 komari-theme-*.zip
-bun.lock

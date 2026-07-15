@@ -16,7 +16,7 @@ Do not bypass this chain unless you are editing bootstrap/transport glue that al
 
 - `main.ts` — bootstrap only: create Vue app, install Pinia/router, load styles, set `window.$message`, run `setupIconify()`, mount App.
 - `App.vue` — app shell: layout, `<Toaster>`, `Provider`, `initApp()` / `destroyInitManager()`, `KeepAlive` for `HomeView`.
-- `router/` — exactly two public lazy routes: `/` and `/instance/:id`. Do not add broad router guards.
+- `router/` — three lazy routes: public `/`, public `/instance/:id`, and admin-only `/nexus-settings`. Do not add broad router guards.
 - `views/` — route-level orchestration only.
 - `components/` — presentation and local UI composition.
 - `components/ui/` — local shadcn-vue-style primitives based on reka-ui + cva + `cn()`.
@@ -30,6 +30,8 @@ Do not bypass this chain unless you are editing bootstrap/transport glue that al
 
 - [stores/app.ts](stores/app.ts) owns public settings, normalized theme settings, login/auth state, layout flags, formatting preferences, theme mode, persisted UI state, and permission helpers.
 - [stores/nodes.ts](stores/nodes.ts) owns normalized nodes, visible nodes, groups, WebSocket state, and live updates.
+- [stores/nexus.ts](stores/nexus.ts) owns versioned service configuration, LAN/WAN selection, and managed Nexus settings.
+- [stores/nexusHistory.ts](stores/nexusHistory.ts) owns lazy history for the currently visible probe page.
 
 Rules:
 

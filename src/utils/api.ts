@@ -15,7 +15,7 @@ const HTTPS_PROTOCOL_REGEX = /^https/
 interface ApiResponse<T = unknown> {
   status: 'success' | 'error'
   message: string
-  data: T
+  data?: T
 }
 
 /** 用户信息 */
@@ -215,7 +215,12 @@ function isApiResponse<T>(value: unknown): value is ApiResponse<T> {
   if (!value || typeof value !== 'object')
     return false
   const record = value as Record<string, unknown>
-  return (record.status === 'success' || record.status === 'error') && 'data' in record
+  return (record.status === 'success' || record.status === 'error')
+    && typeof record.message === 'string'
+}
+
+function hasApiResponseData<T>(value: unknown): value is ApiResponse<T> & { data: T } {
+  return isApiResponse<T>(value) && 'data' in value
 }
 
 async function safeJson(response: Response): Promise<unknown> {
@@ -288,6 +293,9 @@ export class KomariApi {
       if (result.status === 'error') {
         throw new ApiError(result.message || 'Unknown error', 'error', response.status)
       }
+
+      if (!hasApiResponseData<T>(result))
+        throw new ApiError('Invalid API response', 'error', response.status)
 
       return result.data
     }
@@ -380,7 +388,7 @@ export class KomariApi {
         throw new ApiError(result.message || 'Unknown error', 'error', response.status)
       }
 
-      return result.data
+      return result.data as T
     }
     catch (error) {
       clearTimeout(timeoutId)
@@ -410,6 +418,11 @@ export class KomariApi {
    */
   async getPublicSettings(): Promise<PublicSettings> {
     return this.get<PublicSettings>('/public')
+  }
+
+  /** 保存当前主题的托管配置（需要 Komari 管理员会话）。 */
+  async updateThemeSettings(theme: string, settings: Record<string, unknown>): Promise<void> {
+    await this.post<null>(`/admin/theme/settings?theme=${encodeURIComponent(theme)}`, settings)
   }
 
   /**

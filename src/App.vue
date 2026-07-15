@@ -90,7 +90,7 @@ onUnmounted(() => {
               </AlertAction>
             </Alert>
           </div>
-          <div class="max-w-[1280px] mx-auto">
+          <div class="max-w-[1500px] mx-auto">
             <RouterView v-slot="{ Component }">
               <Transition
                 :css="!appStore.disablePageAnimation"

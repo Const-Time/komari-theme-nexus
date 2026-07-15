@@ -1,10 +1,10 @@
-# AGENTS.md
+# Komari Nexus Development Rules
 
-Root-scope guide for AI agents working in `komari-theme-Glassmorphism`.
+Root-scope guide for AI agents working in `komari-theme-nexus`.
 
 For the complete AI/developer manual, read [AIAGENTREADME.md](AIAGENTREADME.md). For persistent task handoff and progress tracking, read and update [AICACHE.md](AICACHE.md).
 
-## Snapshot
+This repository is:
 
 - Updated: 2026-07-12
 - Branch: `main`
@@ -15,16 +15,17 @@ For the complete AI/developer manual, read [AIAGENTREADME.md](AIAGENTREADME.md).
 ## Required workflow for agents
 
 1. Read [AIAGENTREADME.md](AIAGENTREADME.md).
-2. Read [AICACHE.md](AICACHE.md) and preserve/update useful handoff notes.
-3. Check the nearest scoped `AGENTS.md`; [src/AGENTS.md](src/AGENTS.md) overrides this file for app source.
-4. Before broad edits, identify the milestone class:
+2. Read [specs/docs/NEXUS_SPEC.md](specs/docs/NEXUS_SPEC.md) before changing Nexus behavior or layout.
+3. Read [AICACHE.md](AICACHE.md) and preserve/update useful handoff notes.
+4. Check the nearest scoped `AGENTS.md`; [src/AGENTS.md](src/AGENTS.md) overrides this file for app source.
+5. Before broad edits, identify the milestone class:
    - M2 performance only
    - M3 security/permissions only
    - M4 UI/UX only
    - M5 new feature
    - M6 docs/tests/DX
-5. For multi-file or interruptible work, record plan/progress/results in [AICACHE.md](AICACHE.md).
-6. Validate with `bun run lint` and `bun run build` unless the change is docs-only or you explicitly record why validation was skipped.
+6. For multi-file or interruptible work, record plan/progress/results in [AICACHE.md](AICACHE.md).
+7. Validate with `bun run lint` and `bun run build` unless the change is docs-only or you explicitly record why validation was skipped.
 
 ## What this repo builds
 
@@ -32,7 +33,7 @@ This repository builds a Komari theme package, not a generic deployed web app.
 
 Release contract:
 
-- `bun run build` must output `dist/` and `komari-theme-Glassmorphism-build-<short-sha>.zip`.
+- `bun run build` must output `dist/` and `komari-theme-nexus-build-<short-sha>.zip`.
 - Zip layout must stay: `komari-theme.json`, `preview.png`, `dist/`.
 - Packaged `preview.png` comes from [docs/preview.png](docs/preview.png).
 - Do not rename [komari-theme.json](komari-theme.json), [docs/preview.png](docs/preview.png), or the zip pattern.
